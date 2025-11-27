@@ -2,20 +2,20 @@ SELECT * FROM Dependente
 SELECT * FROM Funcionario
 
 INSERT INTO Funcionario (CPF, Nome, DataNascimento, Sexo)
-VALUES ('12121212121', 'Jos� Teste', '1990-10-10', 'M')
+VALUES ('12121212121', 'José Teste', '1990-10-10', 'M')
 
 
 UPDATE Funcionario
-SET Nome = 'Jos� Silva'
-WHERE Nome = 'Jos� Teste'
+SET Nome = 'José Silva'
+WHERE Nome = 'José Teste'
 
-SELECT * FROM Funcionario WHERE Nome LIKE '%Jos�%'
+SELECT * FROM Funcionario WHERE Nome LIKE '%José%'
 
 DELETE FROM Funcionario
-WHERE Nome = 'Jos� Silva'
+WHERE Nome = 'José Silva'
 
 UPDATE Funcionario
-SET Nome = 'Jos� Brasileiro',
+SET Nome = 'José Brasileiro',
     DataNascimento = '1979-11-23'
 WHERE FuncionarioID = 60007
 
@@ -254,44 +254,40 @@ SELECT
     F.DataNascimento
 FROM Funcionario F;
 
-/*CONSULTA*/
+/*Consulta*/
 SELECT * FROM vw_FuncionariosBasico;
 
 /*33*/
 
 CREATE VIEW vw_ProjetosPorFaixaIdade AS
 SELECT 
-    CASE 
-        WHEN Idade < 25 THEN '< 25'
-        WHEN Idade BETWEEN 25 AND 35 THEN '25-35'
-        WHEN Idade BETWEEN 36 AND 50 THEN '36-50'
-        ELSE '> 50'
-    END AS FaixaIdade,
+    FaixaIdade,
     COUNT(T.ProjetoID) AS QuantidadeProjetos
 FROM (
     SELECT 
         F.FuncionarioID,
-        DATEDIFF(YEAR, F.DataNascimento, GETDATE()) 
-            - CASE 
-                WHEN MONTH(GETDATE()) < MONTH(F.DataNascimento)
-                     OR (MONTH(GETDATE()) = MONTH(F.DataNascimento) AND DAY(GETDATE()) < DAY(F.DataNascimento))
-                  THEN 1 
-                  ELSE 0 
-              END AS Idade
+        CASE 
+            WHEN DATEDIFF(YEAR, F.DataNascimento, GETDATE()) 
+                 - CASE WHEN MONTH(GETDATE()) < MONTH(F.DataNascimento)
+                        OR (MONTH(GETDATE()) = MONTH(F.DataNascimento) AND DAY(GETDATE()) < DAY(F.DataNascimento))
+                   THEN 1 ELSE 0 END < 25 THEN '< 25'
+            WHEN DATEDIFF(YEAR, F.DataNascimento, GETDATE()) 
+                 - CASE WHEN MONTH(GETDATE()) < MONTH(F.DataNascimento)
+                        OR (MONTH(GETDATE()) = MONTH(F.DataNascimento) AND DAY(GETDATE()) < DAY(F.DataNascimento))
+                   THEN 1 ELSE 0 END BETWEEN 25 AND 35 THEN '25-35'
+            WHEN DATEDIFF(YEAR, F.DataNascimento, GETDATE()) 
+                 - CASE WHEN MONTH(GETDATE()) < MONTH(F.DataNascimento)
+                        OR (MONTH(GETDATE()) = MONTH(F.DataNascimento) AND DAY(GETDATE()) < DAY(F.DataNascimento))
+                   THEN 1 ELSE 0 END BETWEEN 36 AND 50 THEN '36-50'
+            ELSE '> 50'
+        END AS FaixaIdade
     FROM Funcionario F
-) AS X
-LEFT JOIN TrabalhaProjeto T 
-    ON X.FuncionarioID = T.FuncionarioID
-GROUP BY 
-    CASE 
-        WHEN Idade < 25 THEN '< 25'
-        WHEN Idade BETWEEN 25 AND 35 THEN '25-35'
-        WHEN Idade BETWEEN 36 AND 50 THEN '36-50'
-        ELSE '> 50'
-    END;
+) X
+LEFT JOIN TrabalhaProjeto T ON X.FuncionarioID = T.FuncionarioID
+GROUP BY FaixaIdade;
 
-/*CONSULTA*/
-    SELECT * FROM vw_ProjetosPorFaixaIdade;
+/*Consulta*/
+SELECT * FROM vw_ProjetosPorFaixaIdade;
 
 
 /*34*/
@@ -383,7 +379,7 @@ SELECT
     CASE
         WHEN Idade <= 25 THEN 'Jovem'
         WHEN Idade BETWEEN 26 AND 45 THEN 'Adulto'
-        ELSE 'S�nior'
+        ELSE 'Sênior'
     END AS FaixaEtaria
 FROM (
     SELECT 
@@ -433,3 +429,74 @@ GROUP BY
 SELECT *
 FROM vw_HorasFuncionarioDepartamento
 ORDER BY TotalHoras DESC;
+
+
+/*44*/
+CREATE PROCEDURE sp_ProjetosDoFuncionario
+    @FuncionarioID INT
+AS
+BEGIN
+    SELECT 
+        P.ProjetoID,
+        P.Nome AS NomeProjeto,
+        T.QtdeHoras
+    FROM TrabalhaProjeto T
+    INNER JOIN Projeto P
+        ON T.ProjetoID = P.ProjetoID
+    WHERE T.FuncionarioID = @FuncionarioID;
+END;
+
+/*Execução de exemplo*/
+-- EXEC sp_ProjetosDoFuncionario 1;
+
+/*45*/
+CREATE PROCEDURE sp_FuncionariosDoProjeto
+    @ProjetoID INT
+AS
+BEGIN
+    SELECT 
+        F.FuncionarioID,
+        F.Nome AS NomeFuncionario,
+        T.QtdeHoras
+    FROM TrabalhaProjeto T
+    INNER JOIN Funcionario F
+        ON T.FuncionarioID = F.FuncionarioID
+    WHERE T.ProjetoID = @ProjetoID;
+END;
+
+/*Execução de exemplo*/
+-- EXEC sp_FuncionariosDoProjeto 1;
+
+/*46*/
+CREATE PROCEDURE sp_FuncionariosNascidosApos
+    @DataNascimento DATE
+AS
+BEGIN
+    SELECT 
+        FuncionarioID,
+        Nome,
+        DataNascimento
+    FROM Funcionario
+    WHERE DataNascimento > @DataNascimento;
+END;
+
+/*Execução de exemplo*/
+-- EXEC sp_FuncionariosNascidosApos '1990-01-01';
+
+/*47*/
+CREATE PROCEDURE sp_AtualizarDataNascimento
+    @FuncionarioID INT,
+    @NovaDataNascimento DATE
+AS
+BEGIN
+    UPDATE Funcionario
+    SET DataNascimento = @NovaDataNascimento
+    WHERE FuncionarioID = @FuncionarioID;
+
+    SELECT FuncionarioID, Nome, DataNascimento
+    FROM Funcionario
+    WHERE FuncionarioID = @FuncionarioID;
+END;
+
+/*Execução de exemplo*/
+-- EXEC sp_AtualizarDataNascimento 1, '1992-05-15';
